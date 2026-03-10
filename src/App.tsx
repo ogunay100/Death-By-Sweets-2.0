@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, createContext, useContext, useCallback } from 'react'
 import { motion, useInView, AnimatePresence } from 'framer-motion'
-import { ShoppingBag, Phone, Mail, MapPin, Instagram, Facebook, X, Send, ChevronDown, Plus, Minus, Trash2, Menu as MenuIcon, ChevronRight } from 'lucide-react'
+import { ShoppingBag, Phone, Mail, MapPin, Instagram, Facebook, X, Send, ChevronDown, Plus, Minus, Trash2, Menu as MenuIcon } from 'lucide-react'
 import { Skull, MiniSkull, Rose, Heart, Sparkle } from './components/Decorations'
 
 /* ═══════════════════════════════════════
@@ -45,14 +45,14 @@ const MENU_CATEGORIES = [
     emoji: '🍪',
     type: 'cookies' as const,
     items: [
-      { name: 'Chocolate Chip', price: 3 },
-      { name: 'Triple Chocolate', price: 3 },
-      { name: 'M&M', price: 3 },
-      { name: 'Stuffed', price: 3 },
-      { name: 'Seasonal', price: 3 },
+      { name: 'Chocolate Chip', price: 3, dozenPrice: 30 },
+      { name: 'Triple Chocolate', price: 3, dozenPrice: 30 },
+      { name: 'M&M', price: 3, dozenPrice: 30 },
+      { name: 'Stuffed', price: 3, dozenPrice: 30 },
+      { name: 'Seasonal', price: 3, dozenPrice: 30 },
     ],
     pricing: '$3 ea or $30/dozen',
-    note: null,
+    note: 'Mix-ins +$3 per dozen',
     color: '#F5A0C0',
   },
   {
@@ -61,11 +61,11 @@ const MENU_CATEGORIES = [
     emoji: '🟫',
     type: 'brownies' as const,
     items: [
-      { name: 'Fudge', price: 3 },
-      { name: 'Brookie', price: 3 },
-      { name: 'Nutella Blondie', price: 3 },
-      { name: 'Cinnamon Roll Blondie', price: 3 },
-      { name: 'Seasonal', price: 3 },
+      { name: 'Fudge', price: 3, boxPrice: 30 },
+      { name: 'Brookie', price: 3, boxPrice: 30 },
+      { name: 'Nutella Blondie', price: 3, boxPrice: 30 },
+      { name: 'Cinnamon Roll Blondie', price: 3, boxPrice: 30 },
+      { name: 'Seasonal', price: 3, boxPrice: 30 },
     ],
     pricing: '$3 ea or $30/box',
     note: null,
@@ -104,7 +104,7 @@ const MENU_CATEGORIES = [
 ]
 
 /* ═══════════════════════════════════════
-   CART PROVIDER (freeze bug fixed)
+   CART PROVIDER
    ═══════════════════════════════════════ */
 
 function CartProvider({ children }: { children: React.ReactNode }) {
@@ -204,7 +204,7 @@ function FloatingDecorations() {
 }
 
 /* ═══════════════════════════════════════
-   CART SLIDE-OUT PANEL (no layout anim)
+   CART SLIDE-OUT PANEL
    ═══════════════════════════════════════ */
 
 function CartPanel() {
@@ -229,7 +229,6 @@ function CartPanel() {
             transition={{ type: 'spring', damping: 30, stiffness: 300 }}
             className="fixed top-0 right-0 h-full w-full max-w-md bg-gradient-to-b from-crypt to-abyss border-l border-bone/[0.06] z-[70] flex flex-col"
           >
-            {/* Header */}
             <div className="flex items-center justify-between p-6 border-b border-bone/[0.06]">
               <div className="flex items-center gap-3">
                 <ShoppingBag size={20} className="text-blush" />
@@ -243,7 +242,6 @@ function CartPanel() {
               </button>
             </div>
 
-            {/* Items */}
             <div className="flex-1 overflow-y-auto p-6">
               {items.length === 0 ? (
                 <div className="text-center py-16">
@@ -267,17 +265,11 @@ function CartPanel() {
                       </div>
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-1">
-                          <button
-                            onClick={() => updateQuantity(item.id, item.quantity - 1)}
-                            className="w-8 h-8 flex items-center justify-center rounded bg-midnight/60 border border-bone/[0.08] text-bone/60 hover:text-blush hover:border-blush/30 transition-all"
-                          >
+                          <button onClick={() => updateQuantity(item.id, item.quantity - 1)} className="w-8 h-8 flex items-center justify-center rounded bg-midnight/60 border border-bone/[0.08] text-bone/60 hover:text-blush hover:border-blush/30 transition-all">
                             <Minus size={14} />
                           </button>
                           <span className="w-10 text-center font-body font-bold text-bone text-sm">{item.quantity}</span>
-                          <button
-                            onClick={() => updateQuantity(item.id, item.quantity + 1)}
-                            className="w-8 h-8 flex items-center justify-center rounded bg-midnight/60 border border-bone/[0.08] text-bone/60 hover:text-blush hover:border-blush/30 transition-all"
-                          >
+                          <button onClick={() => updateQuantity(item.id, item.quantity + 1)} className="w-8 h-8 flex items-center justify-center rounded bg-midnight/60 border border-bone/[0.08] text-bone/60 hover:text-blush hover:border-blush/30 transition-all">
                             <Plus size={14} />
                           </button>
                         </div>
@@ -289,14 +281,13 @@ function CartPanel() {
               )}
             </div>
 
-            {/* Footer */}
             {items.length > 0 && (
               <div className="border-t border-bone/[0.06] p-6 space-y-4">
                 <div className="flex justify-between items-center">
                   <span className="font-body text-bone/60 text-sm uppercase tracking-wider">Estimated Total</span>
                   <span className="font-display text-2xl text-blush">${estimatedTotal.toFixed(2)}</span>
                 </div>
-                <p className="font-body text-bone/30 text-xs">* Final pricing may vary for dozen/box/loaf deals.</p>
+                <p className="font-body text-bone/30 text-xs">* Final pricing confirmed when we reach out.</p>
                 <a
                   href="#order"
                   onClick={() => setCartOpen(false)}
@@ -317,7 +308,7 @@ function CartPanel() {
 }
 
 /* ═══════════════════════════════════════
-   QUANTITY SELECTOR (base - used for brownies)
+   BASIC QUANTITY SELECTOR (fallback)
    ═══════════════════════════════════════ */
 
 function QuantitySelector({ itemId, itemName, category, unitPrice, color, extras }: {
@@ -338,22 +329,15 @@ function QuantitySelector({ itemId, itemName, category, unitPrice, color, extras
           onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = `${color}15` }}
           onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'transparent' }}
         >
-          <Plus size={12} />
-          Add
+          <Plus size={12} /> Add
         </button>
       ) : (
         <div className="flex items-center gap-1 shrink-0">
-          <button
-            onClick={() => updateQuantity(itemId, qty - 1)}
-            className="w-7 h-7 flex items-center justify-center rounded bg-midnight/60 border border-bone/[0.08] text-bone/60 hover:text-blush hover:border-blush/30 transition-all"
-          >
+          <button onClick={() => updateQuantity(itemId, qty - 1)} className="w-7 h-7 flex items-center justify-center rounded bg-midnight/60 border border-bone/[0.08] text-bone/60 hover:text-blush hover:border-blush/30 transition-all">
             <Minus size={12} />
           </button>
           <span className="w-8 text-center font-body font-bold text-sm" style={{ color }}>{qty}</span>
-          <button
-            onClick={() => updateQuantity(itemId, qty + 1)}
-            className="w-7 h-7 flex items-center justify-center rounded bg-midnight/60 border border-bone/[0.08] text-bone/60 hover:text-blush hover:border-blush/30 transition-all"
-          >
+          <button onClick={() => updateQuantity(itemId, qty + 1)} className="w-7 h-7 flex items-center justify-center rounded bg-midnight/60 border border-bone/[0.08] text-bone/60 hover:text-blush hover:border-blush/30 transition-all">
             <Plus size={12} />
           </button>
         </div>
@@ -363,25 +347,36 @@ function QuantitySelector({ itemId, itemName, category, unitPrice, color, extras
 }
 
 /* ═══════════════════════════════════════
-   COOKIE ITEM (with mix-in selector)
+   COOKIE ITEM
+   - Each / Dozen toggle
+   - Mix-ins = flat $3 per dozen (not per cookie)
    ═══════════════════════════════════════ */
 
 function CookieItem({ item, categoryId, color }: {
-  item: { name: string; price: number }; categoryId: string; color: string
+  item: { name: string; price: number; dozenPrice: number }; categoryId: string; color: string
 }) {
+  const [buyDozen, setBuyDozen] = useState(false)
   const [showMixins, setShowMixins] = useState(false)
   const [selectedMixins, setSelectedMixins] = useState<string[]>([])
   const { items, addItem, updateQuantity } = useCart()
 
   const baseId = `${categoryId}-${item.name.toLowerCase().replace(/\s+/g, '-').replace(/[()]/g, '')}`
-  const mixinSuffix = selectedMixins.length > 0 ? `-mix-${selectedMixins.sort().join('-').toLowerCase().replace(/\s+/g, '')}` : ''
-  const itemId = baseId + mixinSuffix
-  const mixinCost = selectedMixins.length > 0 ? 3 : 0
-  const totalPrice = item.price + mixinCost
+  const hasMixins = selectedMixins.length > 0
+  const mixinSuffix = hasMixins ? '-withmixins' : ''
+  const sizeSuffix = buyDozen ? '-dozen' : '-each'
+  const itemId = baseId + sizeSuffix + mixinSuffix
+
+  // Pricing: mix-ins are a flat $3 added to the dozen price, or $3 added once for individual orders
+  const basePrice = buyDozen ? item.dozenPrice : item.price
+  const mixinFee = hasMixins ? 3 : 0
+  const unitPrice = basePrice + mixinFee
 
   const cartItem = items.find(i => i.id === itemId)
   const qty = cartItem?.quantity || 0
-  const extrasLabel = selectedMixins.length > 0 ? `Mix-ins: ${selectedMixins.join(', ')} (+$3)` : undefined
+
+  const sizeLabel = buyDozen ? 'Dozen' : 'Each'
+  const mixinLabel = hasMixins ? ` + Mix-ins: ${selectedMixins.join(', ')}` : ''
+  const extrasLabel = `${sizeLabel}${mixinLabel}`
 
   const toggleMixin = (mixin: string) => {
     setSelectedMixins(prev =>
@@ -392,11 +387,11 @@ function CookieItem({ item, categoryId, color }: {
   return (
     <div className="py-1.5">
       <div className="flex items-center justify-between gap-2">
-        <div className="flex items-center gap-2 flex-1">
-          <span className="font-body text-bone/80 text-sm">{item.name}</span>
+        <div className="flex items-center gap-2 flex-1 min-w-0">
+          <span className="font-body text-bone/80 text-sm truncate">{item.name}</span>
           <button
             onClick={() => setShowMixins(!showMixins)}
-            className="text-xs font-body px-2 py-0.5 rounded-full border transition-all"
+            className="text-xs font-body px-2 py-0.5 rounded-full border transition-all shrink-0"
             style={{
               borderColor: showMixins ? `${color}60` : `${color}25`,
               color: showMixins ? color : `${color}80`,
@@ -409,14 +404,13 @@ function CookieItem({ item, categoryId, color }: {
 
         {qty === 0 ? (
           <button
-            onClick={() => addItem(itemId, item.name, 'Cookies', totalPrice, extrasLabel)}
+            onClick={() => addItem(itemId, item.name, 'Cookies', unitPrice, extrasLabel)}
             className="flex items-center gap-1.5 px-3 py-1.5 rounded border text-xs font-body font-semibold uppercase tracking-wider transition-all duration-300 shrink-0"
             style={{ borderColor: `${color}40`, color }}
             onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = `${color}15` }}
             onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'transparent' }}
           >
-            <Plus size={12} />
-            {totalPrice > item.price ? `$${totalPrice.toFixed(0)}` : 'Add'}
+            <Plus size={12} /> ${unitPrice}
           </button>
         ) : (
           <div className="flex items-center gap-1 shrink-0">
@@ -431,7 +425,33 @@ function CookieItem({ item, categoryId, color }: {
         )}
       </div>
 
-      {/* Mix-in options */}
+      {/* Each / Dozen toggle */}
+      <div className="mt-2 ml-2 flex items-center gap-2">
+        <button
+          onClick={() => setBuyDozen(false)}
+          className="text-xs font-body px-3 py-1 rounded-full border transition-all"
+          style={{
+            borderColor: !buyDozen ? color : 'rgba(245,230,211,0.08)',
+            color: !buyDozen ? color : 'rgba(245,230,211,0.4)',
+            backgroundColor: !buyDozen ? `${color}15` : 'transparent',
+          }}
+        >
+          Each $3
+        </button>
+        <button
+          onClick={() => setBuyDozen(true)}
+          className="text-xs font-body px-3 py-1 rounded-full border transition-all"
+          style={{
+            borderColor: buyDozen ? color : 'rgba(245,230,211,0.08)',
+            color: buyDozen ? color : 'rgba(245,230,211,0.4)',
+            backgroundColor: buyDozen ? `${color}15` : 'transparent',
+          }}
+        >
+          Dozen $30
+        </button>
+      </div>
+
+      {/* Mix-in selector */}
       <AnimatePresence>
         {showMixins && (
           <motion.div
@@ -442,7 +462,9 @@ function CookieItem({ item, categoryId, color }: {
             className="overflow-hidden"
           >
             <div className="mt-2 ml-2 pl-3 border-l-2 border-bone/[0.06]">
-              <p className="font-body text-bone/40 text-xs mb-2">Select mix-ins (+$3 per cookie):</p>
+              <p className="font-body text-bone/40 text-xs mb-2">
+                Select mix-ins (+$3 flat{buyDozen ? ' per dozen' : ''} — not per cookie):
+              </p>
               <div className="flex flex-wrap gap-1.5">
                 {COOKIE_MIXINS.map(mixin => (
                   <button
@@ -459,10 +481,88 @@ function CookieItem({ item, categoryId, color }: {
                   </button>
                 ))}
               </div>
+              {hasMixins && (
+                <p className="font-body text-blush/60 text-xs mt-2">
+                  +$3 added to {buyDozen ? 'dozen' : 'order'} price = ${unitPrice} {buyDozen ? '/dozen' : '/cookie'}
+                </p>
+              )}
             </div>
           </motion.div>
         )}
       </AnimatePresence>
+    </div>
+  )
+}
+
+/* ═══════════════════════════════════════
+   BROWNIE ITEM (each / box toggle)
+   ═══════════════════════════════════════ */
+
+function BrownieItem({ item, categoryId, color }: {
+  item: { name: string; price: number; boxPrice: number }; categoryId: string; color: string
+}) {
+  const [buyBox, setBuyBox] = useState(false)
+  const { items, addItem, updateQuantity } = useCart()
+
+  const currentPrice = buyBox ? item.boxPrice : item.price
+  const itemId = `${categoryId}-${item.name.toLowerCase().replace(/\s+/g, '-').replace(/[()]/g, '')}${buyBox ? '-box' : '-each'}`
+  const extrasLabel = buyBox ? 'Box' : 'Each'
+
+  const cartItem = items.find(i => i.id === itemId)
+  const qty = cartItem?.quantity || 0
+
+  return (
+    <div className="py-1.5">
+      <div className="flex items-center justify-between gap-2">
+        <span className="font-body text-bone/80 text-sm flex-1">{item.name}</span>
+        {qty === 0 ? (
+          <button
+            onClick={() => addItem(itemId, item.name, 'Brownies', currentPrice, extrasLabel)}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded border text-xs font-body font-semibold uppercase tracking-wider transition-all duration-300 shrink-0"
+            style={{ borderColor: `${color}40`, color }}
+            onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = `${color}15` }}
+            onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'transparent' }}
+          >
+            <Plus size={12} /> ${currentPrice}
+          </button>
+        ) : (
+          <div className="flex items-center gap-1 shrink-0">
+            <button onClick={() => updateQuantity(itemId, qty - 1)} className="w-7 h-7 flex items-center justify-center rounded bg-midnight/60 border border-bone/[0.08] text-bone/60 hover:text-blush hover:border-blush/30 transition-all">
+              <Minus size={12} />
+            </button>
+            <span className="w-8 text-center font-body font-bold text-sm" style={{ color }}>{qty}</span>
+            <button onClick={() => updateQuantity(itemId, qty + 1)} className="w-7 h-7 flex items-center justify-center rounded bg-midnight/60 border border-bone/[0.08] text-bone/60 hover:text-blush hover:border-blush/30 transition-all">
+              <Plus size={12} />
+            </button>
+          </div>
+        )}
+      </div>
+
+      {/* Each / Box toggle */}
+      <div className="mt-2 ml-2 flex items-center gap-2">
+        <button
+          onClick={() => setBuyBox(false)}
+          className="text-xs font-body px-3 py-1 rounded-full border transition-all"
+          style={{
+            borderColor: !buyBox ? color : 'rgba(245,230,211,0.08)',
+            color: !buyBox ? color : 'rgba(245,230,211,0.4)',
+            backgroundColor: !buyBox ? `${color}15` : 'transparent',
+          }}
+        >
+          Each $3
+        </button>
+        <button
+          onClick={() => setBuyBox(true)}
+          className="text-xs font-body px-3 py-1 rounded-full border transition-all"
+          style={{
+            borderColor: buyBox ? color : 'rgba(245,230,211,0.08)',
+            color: buyBox ? color : 'rgba(245,230,211,0.4)',
+            backgroundColor: buyBox ? `${color}15` : 'transparent',
+          }}
+        >
+          Box $30
+        </button>
+      </div>
     </div>
   )
 }
@@ -497,8 +597,7 @@ function CupcakeItem({ item, categoryId, color }: {
             onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = `${color}15` }}
             onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'transparent' }}
           >
-            <Plus size={12} />
-            Add
+            <Plus size={12} /> Add
           </button>
         ) : (
           <div className="flex items-center gap-1 shrink-0">
@@ -513,7 +612,6 @@ function CupcakeItem({ item, categoryId, color }: {
         )}
       </div>
 
-      {/* Frosting selector */}
       <div className="mt-2 ml-2 flex items-center gap-1.5 flex-wrap">
         <span className="font-body text-bone/30 text-xs">Frosting:</span>
         {FROSTING_OPTIONS.map(frost => (
@@ -536,7 +634,7 @@ function CupcakeItem({ item, categoryId, color }: {
 }
 
 /* ═══════════════════════════════════════
-   LOAF ITEM (slice or whole loaf toggle)
+   LOAF ITEM (slice / whole loaf toggle)
    ═══════════════════════════════════════ */
 
 function LoafItem({ item, categoryId, color }: {
@@ -564,8 +662,7 @@ function LoafItem({ item, categoryId, color }: {
             onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = `${color}15` }}
             onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'transparent' }}
           >
-            <Plus size={12} />
-            ${currentPrice.toFixed(2)}
+            <Plus size={12} /> ${currentPrice.toFixed(2)}
           </button>
         ) : (
           <div className="flex items-center gap-1 shrink-0">
@@ -580,7 +677,6 @@ function LoafItem({ item, categoryId, color }: {
         )}
       </div>
 
-      {/* Slice / Loaf toggle */}
       <div className="mt-2 ml-2 flex items-center gap-2">
         <button
           onClick={() => setBuyLoaf(false)}
@@ -694,7 +790,7 @@ function Navigation() {
 }
 
 /* ═══════════════════════════════════════
-   HERO SECTION
+   HERO
    ═══════════════════════════════════════ */
 
 function Hero() {
@@ -715,28 +811,19 @@ function Hero() {
         <motion.div initial={{ opacity: 0, scale: 0.8 }} animate={{ opacity: 1, scale: 1 }} transition={{ duration: 1, ease: [0.22, 1, 0.36, 1] }}>
           <Skull size={180} className="mx-auto mb-8 drop-shadow-2xl" />
         </motion.div>
-
         <motion.h1 initial={{ opacity: 0, y: 40 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.8, delay: 0.3 }} className="font-display text-6xl sm:text-7xl md:text-8xl lg:text-9xl text-blush text-shadow-glow tracking-wider mb-6">
           Death By Sweets
         </motion.h1>
-
         <motion.p initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.8, delay: 0.6 }} className="font-script text-2xl md:text-3xl text-bone/70 mb-4 max-w-2xl mx-auto">
           Sinfully rich. Deathly delicious.
         </motion.p>
-
         <motion.p initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.8, delay: 0.8 }} className="font-body text-bone/40 text-sm uppercase tracking-[0.3em] mb-12">
           Handcrafted cookies · brownies · cupcakes · cakes · loaves
         </motion.p>
-
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.8, delay: 1 }} className="flex flex-col sm:flex-row gap-4 justify-center items-center">
-          <a href="#menu" className="group bg-blush/10 border-2 border-blush text-blush hover:bg-blush hover:text-midnight px-10 py-4 font-body font-bold uppercase tracking-[0.2em] text-sm transition-all duration-300 hover:shadow-[0_0_30px_rgba(245,160,192,0.3)]">
-            View Menu
-          </a>
-          <a href="#order" className="group bg-transparent border-2 border-bone/20 text-bone/70 hover:border-blush hover:text-blush px-10 py-4 font-body font-bold uppercase tracking-[0.2em] text-sm transition-all duration-300">
-            Place an Order
-          </a>
+          <a href="#menu" className="bg-blush/10 border-2 border-blush text-blush hover:bg-blush hover:text-midnight px-10 py-4 font-body font-bold uppercase tracking-[0.2em] text-sm transition-all duration-300 hover:shadow-[0_0_30px_rgba(245,160,192,0.3)]">View Menu</a>
+          <a href="#order" className="bg-transparent border-2 border-bone/20 text-bone/70 hover:border-blush hover:text-blush px-10 py-4 font-body font-bold uppercase tracking-[0.2em] text-sm transition-all duration-300">Place an Order</a>
         </motion.div>
-
         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 1.5, duration: 1 }} className="absolute bottom-12 left-1/2 -translate-x-1/2">
           <motion.div animate={{ y: [0, 10, 0] }} transition={{ duration: 2, repeat: Infinity }}>
             <ChevronDown className="text-blush/30" size={32} />
@@ -795,36 +882,24 @@ function MenuCard({ category }: { category: typeof MENU_CATEGORIES[0] }) {
           <h3 className="font-display text-3xl md:text-4xl tracking-wide" style={{ color: category.color }}>{category.title}</h3>
         </div>
 
-        {/* Items — different components per category type */}
         <div className="space-y-1 mb-6">
           {category.items.map((item) => {
             if (category.type === 'cookies') {
-              return <CookieItem key={item.name} item={item} categoryId={category.id} color={category.color} />
+              return <CookieItem key={item.name} item={item as any} categoryId={category.id} color={category.color} />
+            }
+            if (category.type === 'brownies') {
+              return <BrownieItem key={item.name} item={item as any} categoryId={category.id} color={category.color} />
             }
             if (category.type === 'cupcakes') {
               return <CupcakeItem key={item.name} item={item} categoryId={category.id} color={category.color} />
             }
             if (category.type === 'loaves') {
-              return (
-                <LoafItem
-                  key={item.name}
-                  item={item as { name: string; price: number; loafPrice?: number }}
-                  categoryId={category.id}
-                  color={category.color}
-                />
-              )
+              return <LoafItem key={item.name} item={item as any} categoryId={category.id} color={category.color} />
             }
-            // Brownies — basic selector
-            const itemId = `${category.id}-${item.name.toLowerCase().replace(/\s+/g, '-').replace(/[()]/g, '')}`
-            return (
-              <div key={item.name} className="py-1.5">
-                <QuantitySelector itemId={itemId} itemName={item.name} category={category.title} unitPrice={item.price} color={category.color} />
-              </div>
-            )
+            return null
           })}
         </div>
 
-        {/* Pricing footer */}
         <div className="border-t border-bone/[0.06] pt-5">
           <p className="font-script text-xl font-bold" style={{ color: category.color }}>{category.pricing}</p>
           {category.note && <p className="font-body text-bone/40 text-sm mt-2 whitespace-pre-line">{category.note}</p>}
@@ -876,7 +951,6 @@ function OrderSection() {
         </AnimatedSection>
 
         <div className="grid grid-cols-1 lg:grid-cols-5 gap-8">
-          {/* Summary sidebar */}
           <AnimatedSection delay={0.1} className="lg:col-span-2">
             <div className="bg-gradient-to-br from-crypt to-tomb border border-bone/[0.06] rounded-lg p-6 sticky top-24">
               <h3 className="font-display text-xl text-blush mb-4 flex items-center gap-2">
@@ -910,14 +984,13 @@ function OrderSection() {
                       <span className="font-body text-bone/50 text-sm">Estimated Total</span>
                       <span className="font-display text-xl text-blush">${estimatedTotal.toFixed(2)}</span>
                     </div>
-                    <p className="font-body text-bone/25 text-xs mt-1">* Dozen/box/loaf pricing applied at confirmation</p>
+                    <p className="font-body text-bone/25 text-xs mt-1">* Final pricing confirmed when we reach out</p>
                   </div>
                 </>
               )}
             </div>
           </AnimatedSection>
 
-          {/* Form */}
           <AnimatedSection delay={0.25} className="lg:col-span-3">
             <div className="relative">
               <div className="absolute -inset-[1px] rounded-lg bg-gradient-to-br from-blush/10 via-transparent to-darkrose/10 blur-sm" />
@@ -970,7 +1043,7 @@ function OrderSection() {
 }
 
 /* ═══════════════════════════════════════
-   CONTACT SECTION
+   CONTACT
    ═══════════════════════════════════════ */
 
 function ContactSection() {
