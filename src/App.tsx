@@ -1,6 +1,6 @@
-import { useState, useEffect, useRef, createContext, useContext } from 'react'
+import { useState, useEffect, useRef, createContext, useContext, useCallback } from 'react'
 import { motion, useInView, AnimatePresence } from 'framer-motion'
-import { ShoppingBag, Phone, Mail, MapPin, Instagram, Facebook, X, Send, ChevronDown, Plus, Minus, Trash2, Menu as MenuIcon } from 'lucide-react'
+import { ShoppingBag, Phone, Mail, MapPin, Instagram, Facebook, X, Send, ChevronDown, Plus, Minus, Trash2, Menu as MenuIcon, ChevronRight } from 'lucide-react'
 import { Skull, MiniSkull, Rose, Heart, Sparkle } from './components/Decorations'
 
 /* ═══════════════════════════════════════
@@ -13,11 +13,12 @@ interface CartItem {
   category: string
   quantity: number
   unitPrice: number
+  extras?: string
 }
 
 interface CartContextType {
   items: CartItem[]
-  addItem: (id: string, name: string, category: string, unitPrice: number) => void
+  addItem: (id: string, name: string, category: string, unitPrice: number, extras?: string) => void
   removeItem: (id: string) => void
   updateQuantity: (id: string, quantity: number) => void
   clearCart: () => void
@@ -34,11 +35,15 @@ function useCart() {
   return ctx
 }
 
+const COOKIE_MIXINS = ['Sprinkles', 'Oreo Pieces', 'Peanut Butter Cups', 'Caramel Drizzle', 'White Chocolate Chips', 'Toffee Bits']
+const FROSTING_OPTIONS = ['Vanilla', 'Chocolate', 'Coffee', 'Strawberry']
+
 const MENU_CATEGORIES = [
   {
     id: 'cookies',
     title: 'Cookies',
     emoji: '🍪',
+    type: 'cookies' as const,
     items: [
       { name: 'Chocolate Chip', price: 3 },
       { name: 'Triple Chocolate', price: 3 },
@@ -47,13 +52,14 @@ const MENU_CATEGORIES = [
       { name: 'Seasonal', price: 3 },
     ],
     pricing: '$3 ea or $30/dozen',
-    note: 'Mix-ins for cookies will be an additional $2–$4 per dozen',
+    note: null,
     color: '#F5A0C0',
   },
   {
     id: 'brownies',
     title: 'Brownies',
     emoji: '🟫',
+    type: 'brownies' as const,
     items: [
       { name: 'Fudge', price: 3 },
       { name: 'Brookie', price: 3 },
@@ -69,6 +75,7 @@ const MENU_CATEGORIES = [
     id: 'cupcakes',
     title: 'Cupcakes & Cakes',
     emoji: '🧁',
+    type: 'cupcakes' as const,
     items: [
       { name: 'Vanilla', price: 3.50 },
       { name: 'Chocolate', price: 3.50 },
@@ -78,17 +85,17 @@ const MENU_CATEGORIES = [
     pricing: 'Mini cakes & cupcakes $3.50 ea or $38/dozen',
     note: 'Please message us for WHOLE CAKE pricing.',
     color: '#FF69B4',
-    frostings: ['Vanilla', 'Chocolate', 'Coffee', 'Strawberry'],
   },
   {
     id: 'loaves',
     title: 'Loaves',
     emoji: '🍞',
+    type: 'loaves' as const,
     items: [
-      { name: 'Lemon Glazed', price: 2.50 },
-      { name: 'Banana (With Nuts or Chocolate Chips)', price: 2.50 },
-      { name: 'Cinnamon Crumb Cake', price: 2.50 },
-      { name: 'Seasonal', price: 2.50 },
+      { name: 'Lemon Glazed', price: 2.50, loafPrice: 20 },
+      { name: 'Banana (With Nuts or Chocolate Chips)', price: 2.50, loafPrice: 20 },
+      { name: 'Cinnamon Crumb Cake', price: 2.50, loafPrice: 20 },
+      { name: 'Seasonal', price: 2.50, loafPrice: 20 },
     ],
     pricing: '$2.50 per slice or $20 per loaf',
     note: null,
@@ -97,36 +104,37 @@ const MENU_CATEGORIES = [
 ]
 
 /* ═══════════════════════════════════════
-   CART PROVIDER
+   CART PROVIDER (freeze bug fixed)
    ═══════════════════════════════════════ */
 
 function CartProvider({ children }: { children: React.ReactNode }) {
   const [items, setItems] = useState<CartItem[]>([])
   const [cartOpen, setCartOpen] = useState(false)
 
-  const addItem = (id: string, name: string, category: string, unitPrice: number) => {
+  const addItem = useCallback((id: string, name: string, category: string, unitPrice: number, extras?: string) => {
     setItems(prev => {
       const existing = prev.find(i => i.id === id)
       if (existing) {
         return prev.map(i => i.id === id ? { ...i, quantity: i.quantity + 1 } : i)
       }
-      return [...prev, { id, name, category, quantity: 1, unitPrice }]
+      return [...prev, { id, name, category, quantity: 1, unitPrice, extras }]
     })
-  }
+  }, [])
 
-  const removeItem = (id: string) => {
+  const removeItem = useCallback((id: string) => {
     setItems(prev => prev.filter(i => i.id !== id))
-  }
+  }, [])
 
-  const updateQuantity = (id: string, quantity: number) => {
-    if (quantity <= 0) {
-      removeItem(id)
-      return
-    }
-    setItems(prev => prev.map(i => i.id === id ? { ...i, quantity } : i))
-  }
+  const updateQuantity = useCallback((id: string, quantity: number) => {
+    setItems(prev => {
+      if (quantity <= 0) {
+        return prev.filter(i => i.id !== id)
+      }
+      return prev.map(i => i.id === id ? { ...i, quantity } : i)
+    })
+  }, [])
 
-  const clearCart = () => setItems([])
+  const clearCart = useCallback(() => setItems([]), [])
 
   const totalItems = items.reduce((sum, i) => sum + i.quantity, 0)
 
@@ -196,7 +204,7 @@ function FloatingDecorations() {
 }
 
 /* ═══════════════════════════════════════
-   CART SLIDE-OUT PANEL
+   CART SLIDE-OUT PANEL (no layout anim)
    ═══════════════════════════════════════ */
 
 function CartPanel() {
@@ -214,7 +222,6 @@ function CartPanel() {
             className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[60]"
             onClick={() => setCartOpen(false)}
           />
-
           <motion.div
             initial={{ x: '100%' }}
             animate={{ x: 0 }}
@@ -228,9 +235,7 @@ function CartPanel() {
                 <ShoppingBag size={20} className="text-blush" />
                 <h2 className="font-display text-2xl text-blush">Your Cart</h2>
                 {totalItems > 0 && (
-                  <span className="bg-blush text-midnight text-xs font-body font-bold px-2 py-0.5 rounded-full">
-                    {totalItems}
-                  </span>
+                  <span className="bg-blush text-midnight text-xs font-body font-bold px-2 py-0.5 rounded-full">{totalItems}</span>
                 )}
               </div>
               <button onClick={() => setCartOpen(false)} className="text-bone/40 hover:text-blush transition-colors">
@@ -249,18 +254,12 @@ function CartPanel() {
               ) : (
                 <div className="space-y-4">
                   {items.map((item) => (
-                    <motion.div
-                      key={item.id}
-                      layout
-                      initial={{ opacity: 0, x: 20 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      exit={{ opacity: 0, x: -20 }}
-                      className="bg-tomb/50 border border-bone/[0.04] rounded-lg p-4"
-                    >
+                    <div key={item.id} className="bg-tomb/50 border border-bone/[0.04] rounded-lg p-4">
                       <div className="flex items-start justify-between mb-3">
                         <div className="flex-1 mr-3">
                           <p className="font-body font-semibold text-bone text-sm">{item.name}</p>
                           <p className="font-body text-bone/40 text-xs">{item.category}</p>
+                          {item.extras && <p className="font-body text-blush/60 text-xs mt-1">{item.extras}</p>}
                         </div>
                         <button onClick={() => removeItem(item.id)} className="text-bone/20 hover:text-red-400 transition-colors p-1">
                           <Trash2 size={14} />
@@ -284,7 +283,7 @@ function CartPanel() {
                         </div>
                         <p className="font-body font-semibold text-blush text-sm">${(item.quantity * item.unitPrice).toFixed(2)}</p>
                       </div>
-                    </motion.div>
+                    </div>
                   ))}
                 </div>
               )}
@@ -297,7 +296,7 @@ function CartPanel() {
                   <span className="font-body text-bone/60 text-sm uppercase tracking-wider">Estimated Total</span>
                   <span className="font-display text-2xl text-blush">${estimatedTotal.toFixed(2)}</span>
                 </div>
-                <p className="font-body text-bone/30 text-xs">* Final pricing may vary for dozen/box deals.</p>
+                <p className="font-body text-bone/30 text-xs">* Final pricing may vary for dozen/box/loaf deals.</p>
                 <a
                   href="#order"
                   onClick={() => setCartOpen(false)}
@@ -305,10 +304,7 @@ function CartPanel() {
                 >
                   Proceed to Order
                 </a>
-                <button
-                  onClick={clearCart}
-                  className="w-full text-bone/30 hover:text-red-400 font-body text-xs uppercase tracking-wider transition-colors py-2"
-                >
+                <button onClick={clearCart} className="w-full text-bone/30 hover:text-red-400 font-body text-xs uppercase tracking-wider transition-colors py-2">
                   Clear Cart
                 </button>
               </div>
@@ -321,23 +317,23 @@ function CartPanel() {
 }
 
 /* ═══════════════════════════════════════
-   QUANTITY SELECTOR (in menu cards)
+   QUANTITY SELECTOR (base - used for brownies)
    ═══════════════════════════════════════ */
 
-function QuantitySelector({ itemId, itemName, category, unitPrice, color }: {
-  itemId: string; itemName: string; category: string; unitPrice: number; color: string
+function QuantitySelector({ itemId, itemName, category, unitPrice, color, extras }: {
+  itemId: string; itemName: string; category: string; unitPrice: number; color: string; extras?: string
 }) {
   const { items, addItem, updateQuantity } = useCart()
   const cartItem = items.find(i => i.id === itemId)
   const qty = cartItem?.quantity || 0
 
   return (
-    <div className="flex items-center justify-between">
-      <span className="font-body text-bone/80 text-sm flex-1 mr-3">{itemName}</span>
+    <div className="flex items-center justify-between gap-2">
+      <span className="font-body text-bone/80 text-sm flex-1">{itemName}</span>
       {qty === 0 ? (
         <button
-          onClick={() => addItem(itemId, itemName, category, unitPrice)}
-          className="flex items-center gap-1.5 px-3 py-1.5 rounded border text-xs font-body font-semibold uppercase tracking-wider transition-all duration-300 hover:shadow-[0_0_15px_rgba(245,160,192,0.15)]"
+          onClick={() => addItem(itemId, itemName, category, unitPrice, extras)}
+          className="flex items-center gap-1.5 px-3 py-1.5 rounded border text-xs font-body font-semibold uppercase tracking-wider transition-all duration-300 shrink-0"
           style={{ borderColor: `${color}40`, color }}
           onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = `${color}15` }}
           onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'transparent' }}
@@ -346,22 +342,14 @@ function QuantitySelector({ itemId, itemName, category, unitPrice, color }: {
           Add
         </button>
       ) : (
-        <div className="flex items-center gap-1">
+        <div className="flex items-center gap-1 shrink-0">
           <button
             onClick={() => updateQuantity(itemId, qty - 1)}
             className="w-7 h-7 flex items-center justify-center rounded bg-midnight/60 border border-bone/[0.08] text-bone/60 hover:text-blush hover:border-blush/30 transition-all"
           >
             <Minus size={12} />
           </button>
-          <motion.span
-            key={qty}
-            initial={{ scale: 1.3 }}
-            animate={{ scale: 1 }}
-            className="w-8 text-center font-body font-bold text-sm"
-            style={{ color }}
-          >
-            {qty}
-          </motion.span>
+          <span className="w-8 text-center font-body font-bold text-sm" style={{ color }}>{qty}</span>
           <button
             onClick={() => updateQuantity(itemId, qty + 1)}
             className="w-7 h-7 flex items-center justify-center rounded bg-midnight/60 border border-bone/[0.08] text-bone/60 hover:text-blush hover:border-blush/30 transition-all"
@@ -370,6 +358,253 @@ function QuantitySelector({ itemId, itemName, category, unitPrice, color }: {
           </button>
         </div>
       )}
+    </div>
+  )
+}
+
+/* ═══════════════════════════════════════
+   COOKIE ITEM (with mix-in selector)
+   ═══════════════════════════════════════ */
+
+function CookieItem({ item, categoryId, color }: {
+  item: { name: string; price: number }; categoryId: string; color: string
+}) {
+  const [showMixins, setShowMixins] = useState(false)
+  const [selectedMixins, setSelectedMixins] = useState<string[]>([])
+  const { items, addItem, updateQuantity } = useCart()
+
+  const baseId = `${categoryId}-${item.name.toLowerCase().replace(/\s+/g, '-').replace(/[()]/g, '')}`
+  const mixinSuffix = selectedMixins.length > 0 ? `-mix-${selectedMixins.sort().join('-').toLowerCase().replace(/\s+/g, '')}` : ''
+  const itemId = baseId + mixinSuffix
+  const mixinCost = selectedMixins.length > 0 ? 3 : 0
+  const totalPrice = item.price + mixinCost
+
+  const cartItem = items.find(i => i.id === itemId)
+  const qty = cartItem?.quantity || 0
+  const extrasLabel = selectedMixins.length > 0 ? `Mix-ins: ${selectedMixins.join(', ')} (+$3)` : undefined
+
+  const toggleMixin = (mixin: string) => {
+    setSelectedMixins(prev =>
+      prev.includes(mixin) ? prev.filter(m => m !== mixin) : [...prev, mixin]
+    )
+  }
+
+  return (
+    <div className="py-1.5">
+      <div className="flex items-center justify-between gap-2">
+        <div className="flex items-center gap-2 flex-1">
+          <span className="font-body text-bone/80 text-sm">{item.name}</span>
+          <button
+            onClick={() => setShowMixins(!showMixins)}
+            className="text-xs font-body px-2 py-0.5 rounded-full border transition-all"
+            style={{
+              borderColor: showMixins ? `${color}60` : `${color}25`,
+              color: showMixins ? color : `${color}80`,
+              backgroundColor: showMixins ? `${color}15` : 'transparent',
+            }}
+          >
+            + mix-in
+          </button>
+        </div>
+
+        {qty === 0 ? (
+          <button
+            onClick={() => addItem(itemId, item.name, 'Cookies', totalPrice, extrasLabel)}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded border text-xs font-body font-semibold uppercase tracking-wider transition-all duration-300 shrink-0"
+            style={{ borderColor: `${color}40`, color }}
+            onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = `${color}15` }}
+            onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'transparent' }}
+          >
+            <Plus size={12} />
+            {totalPrice > item.price ? `$${totalPrice.toFixed(0)}` : 'Add'}
+          </button>
+        ) : (
+          <div className="flex items-center gap-1 shrink-0">
+            <button onClick={() => updateQuantity(itemId, qty - 1)} className="w-7 h-7 flex items-center justify-center rounded bg-midnight/60 border border-bone/[0.08] text-bone/60 hover:text-blush hover:border-blush/30 transition-all">
+              <Minus size={12} />
+            </button>
+            <span className="w-8 text-center font-body font-bold text-sm" style={{ color }}>{qty}</span>
+            <button onClick={() => updateQuantity(itemId, qty + 1)} className="w-7 h-7 flex items-center justify-center rounded bg-midnight/60 border border-bone/[0.08] text-bone/60 hover:text-blush hover:border-blush/30 transition-all">
+              <Plus size={12} />
+            </button>
+          </div>
+        )}
+      </div>
+
+      {/* Mix-in options */}
+      <AnimatePresence>
+        {showMixins && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: 'auto', opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.2 }}
+            className="overflow-hidden"
+          >
+            <div className="mt-2 ml-2 pl-3 border-l-2 border-bone/[0.06]">
+              <p className="font-body text-bone/40 text-xs mb-2">Select mix-ins (+$3 per cookie):</p>
+              <div className="flex flex-wrap gap-1.5">
+                {COOKIE_MIXINS.map(mixin => (
+                  <button
+                    key={mixin}
+                    onClick={() => toggleMixin(mixin)}
+                    className="text-xs font-body px-2.5 py-1 rounded-full border transition-all"
+                    style={{
+                      borderColor: selectedMixins.includes(mixin) ? color : 'rgba(245,230,211,0.08)',
+                      color: selectedMixins.includes(mixin) ? color : 'rgba(245,230,211,0.5)',
+                      backgroundColor: selectedMixins.includes(mixin) ? `${color}15` : 'transparent',
+                    }}
+                  >
+                    {mixin}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  )
+}
+
+/* ═══════════════════════════════════════
+   CUPCAKE ITEM (with frosting selector)
+   ═══════════════════════════════════════ */
+
+function CupcakeItem({ item, categoryId, color }: {
+  item: { name: string; price: number }; categoryId: string; color: string
+}) {
+  const [selectedFrosting, setSelectedFrosting] = useState<string>('')
+  const { items, addItem, updateQuantity } = useCart()
+
+  const baseId = `${categoryId}-${item.name.toLowerCase().replace(/\s+/g, '-').replace(/[()]/g, '')}`
+  const frostingSuffix = selectedFrosting ? `-frost-${selectedFrosting.toLowerCase()}` : ''
+  const itemId = baseId + frostingSuffix
+  const extrasLabel = selectedFrosting ? `Frosting: ${selectedFrosting}` : undefined
+
+  const cartItem = items.find(i => i.id === itemId)
+  const qty = cartItem?.quantity || 0
+
+  return (
+    <div className="py-1.5">
+      <div className="flex items-center justify-between gap-2">
+        <span className="font-body text-bone/80 text-sm flex-1">{item.name}</span>
+        {qty === 0 ? (
+          <button
+            onClick={() => addItem(itemId, item.name, 'Cupcakes & Cakes', item.price, extrasLabel)}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded border text-xs font-body font-semibold uppercase tracking-wider transition-all duration-300 shrink-0"
+            style={{ borderColor: `${color}40`, color }}
+            onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = `${color}15` }}
+            onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'transparent' }}
+          >
+            <Plus size={12} />
+            Add
+          </button>
+        ) : (
+          <div className="flex items-center gap-1 shrink-0">
+            <button onClick={() => updateQuantity(itemId, qty - 1)} className="w-7 h-7 flex items-center justify-center rounded bg-midnight/60 border border-bone/[0.08] text-bone/60 hover:text-blush hover:border-blush/30 transition-all">
+              <Minus size={12} />
+            </button>
+            <span className="w-8 text-center font-body font-bold text-sm" style={{ color }}>{qty}</span>
+            <button onClick={() => updateQuantity(itemId, qty + 1)} className="w-7 h-7 flex items-center justify-center rounded bg-midnight/60 border border-bone/[0.08] text-bone/60 hover:text-blush hover:border-blush/30 transition-all">
+              <Plus size={12} />
+            </button>
+          </div>
+        )}
+      </div>
+
+      {/* Frosting selector */}
+      <div className="mt-2 ml-2 flex items-center gap-1.5 flex-wrap">
+        <span className="font-body text-bone/30 text-xs">Frosting:</span>
+        {FROSTING_OPTIONS.map(frost => (
+          <button
+            key={frost}
+            onClick={() => setSelectedFrosting(selectedFrosting === frost ? '' : frost)}
+            className="text-xs font-body px-2 py-0.5 rounded-full border transition-all"
+            style={{
+              borderColor: selectedFrosting === frost ? color : 'rgba(245,230,211,0.08)',
+              color: selectedFrosting === frost ? color : 'rgba(245,230,211,0.4)',
+              backgroundColor: selectedFrosting === frost ? `${color}15` : 'transparent',
+            }}
+          >
+            {frost}
+          </button>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+/* ═══════════════════════════════════════
+   LOAF ITEM (slice or whole loaf toggle)
+   ═══════════════════════════════════════ */
+
+function LoafItem({ item, categoryId, color }: {
+  item: { name: string; price: number; loafPrice?: number }; categoryId: string; color: string
+}) {
+  const [buyLoaf, setBuyLoaf] = useState(false)
+  const { items, addItem, updateQuantity } = useCart()
+
+  const currentPrice = buyLoaf ? (item.loafPrice || 20) : item.price
+  const itemId = `${categoryId}-${item.name.toLowerCase().replace(/\s+/g, '-').replace(/[()]/g, '')}${buyLoaf ? '-loaf' : '-slice'}`
+  const extrasLabel = buyLoaf ? 'Whole Loaf' : 'Per Slice'
+
+  const cartItem = items.find(i => i.id === itemId)
+  const qty = cartItem?.quantity || 0
+
+  return (
+    <div className="py-1.5">
+      <div className="flex items-center justify-between gap-2">
+        <span className="font-body text-bone/80 text-sm flex-1">{item.name}</span>
+        {qty === 0 ? (
+          <button
+            onClick={() => addItem(itemId, item.name, 'Loaves', currentPrice, extrasLabel)}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded border text-xs font-body font-semibold uppercase tracking-wider transition-all duration-300 shrink-0"
+            style={{ borderColor: `${color}40`, color }}
+            onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = `${color}15` }}
+            onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'transparent' }}
+          >
+            <Plus size={12} />
+            ${currentPrice.toFixed(2)}
+          </button>
+        ) : (
+          <div className="flex items-center gap-1 shrink-0">
+            <button onClick={() => updateQuantity(itemId, qty - 1)} className="w-7 h-7 flex items-center justify-center rounded bg-midnight/60 border border-bone/[0.08] text-bone/60 hover:text-blush hover:border-blush/30 transition-all">
+              <Minus size={12} />
+            </button>
+            <span className="w-8 text-center font-body font-bold text-sm" style={{ color }}>{qty}</span>
+            <button onClick={() => updateQuantity(itemId, qty + 1)} className="w-7 h-7 flex items-center justify-center rounded bg-midnight/60 border border-bone/[0.08] text-bone/60 hover:text-blush hover:border-blush/30 transition-all">
+              <Plus size={12} />
+            </button>
+          </div>
+        )}
+      </div>
+
+      {/* Slice / Loaf toggle */}
+      <div className="mt-2 ml-2 flex items-center gap-2">
+        <button
+          onClick={() => setBuyLoaf(false)}
+          className="text-xs font-body px-3 py-1 rounded-full border transition-all"
+          style={{
+            borderColor: !buyLoaf ? color : 'rgba(245,230,211,0.08)',
+            color: !buyLoaf ? color : 'rgba(245,230,211,0.4)',
+            backgroundColor: !buyLoaf ? `${color}15` : 'transparent',
+          }}
+        >
+          Slice $2.50
+        </button>
+        <button
+          onClick={() => setBuyLoaf(true)}
+          className="text-xs font-body px-3 py-1 rounded-full border transition-all"
+          style={{
+            borderColor: buyLoaf ? color : 'rgba(245,230,211,0.08)',
+            color: buyLoaf ? color : 'rgba(245,230,211,0.4)',
+            backgroundColor: buyLoaf ? `${color}15` : 'transparent',
+          }}
+        >
+          Whole Loaf $20
+        </button>
+      </div>
     </div>
   )
 }
@@ -542,12 +777,6 @@ function MenuSection() {
             </AnimatedSection>
           ))}
         </div>
-
-        <AnimatedSection delay={0.6}>
-          <div className="mt-16 text-center">
-            <p className="font-script text-lg text-blush/80 italic">Mix-ins for cookies will be an additional $2–$4 per dozen</p>
-          </div>
-        </AnimatedSection>
       </div>
     </section>
   )
@@ -566,8 +795,26 @@ function MenuCard({ category }: { category: typeof MENU_CATEGORIES[0] }) {
           <h3 className="font-display text-3xl md:text-4xl tracking-wide" style={{ color: category.color }}>{category.title}</h3>
         </div>
 
-        <div className="space-y-3 mb-6">
+        {/* Items — different components per category type */}
+        <div className="space-y-1 mb-6">
           {category.items.map((item) => {
+            if (category.type === 'cookies') {
+              return <CookieItem key={item.name} item={item} categoryId={category.id} color={category.color} />
+            }
+            if (category.type === 'cupcakes') {
+              return <CupcakeItem key={item.name} item={item} categoryId={category.id} color={category.color} />
+            }
+            if (category.type === 'loaves') {
+              return (
+                <LoafItem
+                  key={item.name}
+                  item={item as { name: string; price: number; loafPrice?: number }}
+                  categoryId={category.id}
+                  color={category.color}
+                />
+              )
+            }
+            // Brownies — basic selector
             const itemId = `${category.id}-${item.name.toLowerCase().replace(/\s+/g, '-').replace(/[()]/g, '')}`
             return (
               <div key={item.name} className="py-1.5">
@@ -577,13 +824,7 @@ function MenuCard({ category }: { category: typeof MENU_CATEGORIES[0] }) {
           })}
         </div>
 
-        {'frostings' in category && category.frostings && (
-          <div className="mb-6 pl-4 border-l-2 border-bone/10">
-            <p className="font-body font-bold text-bone/60 text-sm uppercase tracking-wider mb-2">Frosting Options</p>
-            <p className="font-body text-bone/50 text-sm">{category.frostings.join(' · ')}</p>
-          </div>
-        )}
-
+        {/* Pricing footer */}
         <div className="border-t border-bone/[0.06] pt-5">
           <p className="font-script text-xl font-bold" style={{ color: category.color }}>{category.pricing}</p>
           {category.note && <p className="font-body text-bone/40 text-sm mt-2 whitespace-pre-line">{category.note}</p>}
@@ -635,12 +876,11 @@ function OrderSection() {
         </AnimatedSection>
 
         <div className="grid grid-cols-1 lg:grid-cols-5 gap-8">
-          {/* Order Summary Sidebar */}
+          {/* Summary sidebar */}
           <AnimatedSection delay={0.1} className="lg:col-span-2">
             <div className="bg-gradient-to-br from-crypt to-tomb border border-bone/[0.06] rounded-lg p-6 sticky top-24">
               <h3 className="font-display text-xl text-blush mb-4 flex items-center gap-2">
-                <ShoppingBag size={18} />
-                Your Selection
+                <ShoppingBag size={18} /> Your Selection
               </h3>
 
               {items.length === 0 ? (
@@ -656,6 +896,7 @@ function OrderSection() {
                         <div className="flex-1 mr-2">
                           <p className="font-body text-bone/80 text-sm">{item.name}</p>
                           <p className="font-body text-bone/30 text-xs">{item.category}</p>
+                          {item.extras && <p className="font-body text-blush/50 text-xs">{item.extras}</p>}
                         </div>
                         <div className="text-right">
                           <p className="font-body font-semibold text-blush text-sm">×{item.quantity}</p>
@@ -669,14 +910,14 @@ function OrderSection() {
                       <span className="font-body text-bone/50 text-sm">Estimated Total</span>
                       <span className="font-display text-xl text-blush">${estimatedTotal.toFixed(2)}</span>
                     </div>
-                    <p className="font-body text-bone/25 text-xs mt-1">* Dozen/box pricing applied at confirmation</p>
+                    <p className="font-body text-bone/25 text-xs mt-1">* Dozen/box/loaf pricing applied at confirmation</p>
                   </div>
                 </>
               )}
             </div>
           </AnimatedSection>
 
-          {/* Order Form */}
+          {/* Form */}
           <AnimatedSection delay={0.25} className="lg:col-span-3">
             <div className="relative">
               <div className="absolute -inset-[1px] rounded-lg bg-gradient-to-br from-blush/10 via-transparent to-darkrose/10 blur-sm" />
